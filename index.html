@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#24196b">
 <title>Jeu du HM</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jeu du HM">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#120b2e;--panel:#1e1550;--panel2:#2a2070;--txt:#fff8ee;--mut:#b9b2ec;--acc:#ff7ad9;--red:#ff3b5c;--ok:#2ee59d;--warn:#ffb020}
@@ -308,6 +314,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
       <button class="big alt sm" id="btnLb">🏆 Classement</button>
     </div>
     <button class="big alt" id="btnDuel">⚔️ Duel à 2 joueurs</button>
+    <button class="big alt sm" id="btnInstall">📲 Installer l'app sur mon téléphone</button>
     <div class="box">
       <h3>Comment jouer</h3>
       1. Lis le message du salarié sélectionné.<br>
@@ -416,13 +423,13 @@ const avOf=n=>AVATARS[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%AVATARS.length];
 const JOURS=['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const DAY_LEN=150, H0=8, H1=19;
 const PERIODS=[
-  {from:8,   to:8.25, k:.6, label:''},
+  {from:8,   to:8.25, k:.85,label:''},
   {from:8.25,to:9.75, k:1,  label:'☕ Rush du matin !', rush:1, w:{plomb:1.2,elec:1.4,manu:.8,prop:.8}},
-  {from:9.75,to:11.75,k:.35,label:''},
+  {from:9.75,to:11.75,k:.6, label:''},
   {from:11.75,to:14,  k:.9, label:'🍽️ Pause déjeuner !', rush:1, w:{plomb:1,elec:.6,manu:.5,prop:2.2}},
-  {from:14,  to:16.5, k:.35,label:''},
+  {from:14,  to:16.5, k:.6, label:''},
   {from:16.5,to:18.25,k:.85,label:'🏃 Rush du soir !', rush:1, w:{plomb:.6,elec:.8,manu:2,prop:1}},
-  {from:18.25,to:19.1,k:.2, label:''},
+  {from:18.25,to:19.1,k:.45,label:''},
 ];
 const CHRONO_PER={k:1.05,rush:1,label:''};
 const EVENTS={
@@ -541,6 +548,15 @@ function chHTML(state){
   return S.ch.list.map(c=>{const st=state?state(c):'';return `<div class="ch ${st}">🎯 ${chLabel(c)}<b>${st==='ok'?'✔ ':''}+${CHALLENGES[c.id].reward} €</b></div>`;}).join('');
 }
 
+const staffTotal=()=>TRADES.reduce((a,t)=>a+S.staff[t.id],0);
+// besoin conseillé : 4 intervenants pour 1 bâtiment, +2 par bâtiment ajouté
+const staffNeed=()=>4+2*(nbB(S.day)-1);
+const understaffed=()=>S.day>=2&&S.day<=5&&staffTotal()<staffNeed()&&S.money>=110;
+function hireWarn(){
+  if(!understaffed())return '';
+  const n=nbB(S.day),miss=staffNeed()-staffTotal();
+  return `<div class="defi">⚠️ Fortement conseillé : embauche avant de commencer !<br><small style="font-weight:600">Tu gères maintenant ${n} bâtiments${S.day===2?' dont la Tour B et ses 22 étages':''} avec seulement ${staffTotal()} intervenants. Il t'en faudrait au moins ${miss} de plus. Commence par un plombier et un électricien.</small></div>`;
+}
 function renderBrief(){
   pickChallenges();
   const n=nbB(S.day),b=BUILDINGS[n-1],endless=S.day>5;
@@ -556,14 +572,25 @@ function renderBrief(){
     <div class="sub">${endless?`Le campus complet, en plus intense. Jusqu'où tiendras-tu ?`:
       (S.day===1?`Bienvenue ! Pour commencer, tu gères <b>1 bâtiment</b>.`:`Nouveau contrat : <b>${b.name}</b> (${b.floors} étages) s'ajoute. Tu gères désormais <b>${n} bâtiments</b> seul(e).`)}</div>
     <div class="box"><div class="bmap">${bmapHTML(n,!endless&&S.day>1?n-1:-1)}</div></div>
+    ${hireWarn()}
     <div class="box"><h3>🎯 Défis du jour</h3>${chHTML()}</div>
     <div class="box"><h3>Ton équipe</h3>
       <div class="tradeRow">${TRADES.map(t=>`<div><b>${t.icon}</b>${t.name}<br><b style="font-size:16px">${S.staff[t.id]}</b></div>`).join('')}</div>
     </div>
+    ${S.day>=2?`<div class="box" id="briefShop"><h3>🛒 Embaucher et équiper</h3><div class="money" id="moneyTxt"></div><div class="shop" id="shop"></div></div>`:''}
     <div class="box">💡 ${S.day<=5?tips[S.day-1]:pick(tips.slice(2))}</div>
     <button class="big" id="btnGo">C'est parti ! 🚀</button>
-    <button class="big alt sm" id="btnBack">Menu</button>`;
-  $('#btnGo').onclick=()=>{S.started=true;persist();ensureAC();sfx('day');startGame('camp');};
+    <button class="big alt sm" id="btnBack">Menu</button>
+    <div id="goConfirm"></div>`;
+  if(S.day>=2)renderShop();
+  $('#btnGo').onclick=()=>{
+    if(understaffed()&&!$('#goConfirm').dataset.ok){
+      $('#goConfirm').dataset.ok=1;
+      $('#goConfirm').innerHTML=`<div class="defi" style="margin-top:4px">⚠️ Tu n'as pas assez d'intervenants pour ${nbB(S.day)} bâtiments. Les demandes vont s'accumuler !<br><small style="font-weight:600">Embauche dans la boutique ci-dessus, ou appuie de nouveau sur « C'est parti » pour y aller quand même.</small></div>`;
+      $('#briefShop')&&$('#briefShop').scrollIntoView({behavior:'smooth',block:'start'});sfx('urg');buzz(80);return;
+    }
+    S.started=true;persist();ensureAC();sfx('day');startGame('camp');
+  };
   $('#btnBack').onclick=renderMenu;
   show('brief');$('#briefBody').scrollTop=0;
 }
@@ -819,10 +846,12 @@ function step(dt){
   // apparitions
   if(G.t<G.len-4){
     const evr=G.event?EVENTS[G.event.id].rate:1;
-    const base=G.mode==='chrono'?.34:.26;
+    const base=G.mode!=='camp'?.34:S.day===1?.36:.28;
     const rate=base*per.k*diff()*evr/(1+.25*(G.n-1));
     for(let bi=0;bi<G.n;bi++)if(Math.random()<rate*dt)spawn(bi);
   }
+  // jamais plus de 2,5 s sans demande à l'écran
+  if(!G.tickets.length&&!G.queue.length&&G.t>1&&G.t<G.len-6){G.quiet=(G.quiet||0)+dt;if(G.quiet>2.5){G.quiet=0;spawn(rint(0,G.n-1));}}else G.quiet=0;
   // patience
   for(const t of [...G.tickets]){
     t.left-=dt;
@@ -1024,7 +1053,8 @@ function renderShop(){
     const can=it.can(),c=can?it.cost():0;
     const row=el('div','item',`<span class="ic">${it.icon}</span><span class="tx"><b>${it.label}</b><small>${it.desc()}</small></span>`);
     const b=el('button','buy',can?c+' €':'MAX');b.disabled=!can||S.money<c;
-    b.onclick=()=>{if(!it.can()||S.money<it.cost())return;S.money-=it.cost();it.buy();persist();sfx('buy');renderShop();};
+    b.onclick=()=>{if(!it.can()||S.money<it.cost())return;S.money-=it.cost();it.buy();persist();sfx('buy');renderShop();
+      if(!$('#brief').classList.contains('hidden')){const y=$('#briefBody').scrollTop;renderBrief();$('#briefBody').scrollTop=y;}};
     row.appendChild(b);box.appendChild(row);
   });
 }
@@ -1155,6 +1185,32 @@ function renderDuelResult(){
   const rb=$('#btnRematch');if(rb)rb.onclick=()=>{nsend({t:'rematch'});rb.textContent=`⏳ En attente de ${NET.opp}…`;rb.disabled=true;};
   $('#duelMenu').onclick=()=>{nsend({t:'leave'});netClose();renderMenu();};
 }
+
+/* ================== APP INSTALLABLE ================== */
+let INSTALL_EVT=null;
+const isStandalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();INSTALL_EVT=e;});
+window.addEventListener('appinstalled',()=>{INSTALL_EVT=null;toast('✅ Jeu du HM installé !');syncInstall();});
+if(DUEL_OK&&'serviceWorker' in navigator){try{navigator.serviceWorker.register('/sw.js').catch(()=>{});}catch(e){}}
+function syncInstall(){const b=$('#btnInstall');if(b)b.classList.toggle('hidden',isStandalone());}
+$('#btnInstall').onclick=async()=>{
+  if(DUEL_OK&&INSTALL_EVT){try{INSTALL_EVT.prompt();await INSTALL_EVT.userChoice;}catch(e){}INSTALL_EVT=null;syncInstall();return;}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  $('#duelBody').innerHTML=`
+    <div class="logo" style="font-size:clamp(28px,9vw,36px)">📲 Installer l'app</div>
+    ${DUEL_OK?'':`<div class="box">L'installation se fait depuis la <b>version en ligne</b> du jeu. Ouvre ce lien dans le navigateur de ton téléphone :<div class="sharebox">${esc(RAILWAY_URL)}</div></div><button class="big" id="instCopy">📋 Copier le lien</button>`}
+    <div class="box"><h3>${ios?'Sur iPhone (Safari)':'Sur Android (Chrome)'}</h3>${ios
+      ?'1. Ouvre le jeu dans <b>Safari</b>.<br>2. Appuie sur le bouton <b>Partager</b> (carré avec une flèche).<br>3. Choisis <b>« Sur l\'écran d\'accueil »</b>, puis <b>Ajouter</b>.'
+      :'1. Ouvre le jeu dans <b>Chrome</b>.<br>2. Appuie sur le menu <b>⋮</b> en haut à droite.<br>3. Choisis <b>« Ajouter à l\'écran d\'accueil »</b> ou <b>« Installer l\'application »</b>.'}
+      <br><br>L'icône du Jeu du HM apparaît avec tes autres apps. Il s'ouvre en plein écran et la campagne marche même sans réseau.</div>
+    <div class="box"><h3>${ios?'Sur Android (Chrome)':'Sur iPhone (Safari)'}</h3>${ios
+      ?'Menu <b>⋮</b> → <b>« Installer l\'application »</b>.'
+      :'Bouton <b>Partager</b> → <b>« Sur l\'écran d\'accueil »</b>.'}</div>
+    <button class="big alt sm" id="instBack">Menu</button>`;
+  const c=$('#instCopy');if(c)c.onclick=()=>share('🏢 Le Jeu du HM :',RAILWAY_URL);
+  $('#instBack').onclick=renderMenu;show('duel');
+};
+syncInstall();
 
 /* ================== CLASSEMENT ================== */
 function renderLb(tab){

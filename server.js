@@ -9,8 +9,24 @@ const PORT = process.env.PORT || 3000;
 const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')
   .replace('<head>', '<head><script>window.DUEL=1</script>');
 
+// Fichiers de l'app installable (icônes, manifeste, service worker)
+const VERSION = process.env.RAILWAY_GIT_COMMIT_SHA ? process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 8) : String(Date.now());
+const TYPES = { '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.js': 'text/javascript; charset=utf-8' };
+const PUBLIC = {};
+for (const f of fs.readdirSync(path.join(__dirname, 'public'))) {
+  let body = fs.readFileSync(path.join(__dirname, 'public', f));
+  if (f === 'sw.js') body = Buffer.from(body.toString().replace('__VERSION__', VERSION));
+  PUBLIC['/' + f] = { body, type: TYPES[path.extname(f)] || 'application/octet-stream' };
+}
+
 const server = http.createServer((req, res) => {
-  if (req.url === '/health') { res.writeHead(200); res.end('ok'); return; }
+  const url = req.url.split('?')[0];
+  if (url === '/health') { res.writeHead(200); res.end('ok'); return; }
+  const file = PUBLIC[url];
+  if (file) {
+    res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': url === '/sw.js' ? 'no-cache' : 'public, max-age=86400' });
+    res.end(file.body); return;
+  }
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
   res.end(html);
 });
