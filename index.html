@@ -276,6 +276,19 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
 .vs{display:flex;align-items:center;justify-content:space-around;text-align:center;font-weight:800}
 .vs b{display:block;font-size:30px;color:#ffc94d}
 .tag.clumsy{background:linear-gradient(#d9d2ff,#9b8cff);color:#1d1550}
+
+/* ===== V7 : panne d'ascenseur ===== */
+.tbody.broken .shaft{background:repeating-linear-gradient(135deg,#0009 0 3px,#ffffff30 3px 5px)}
+.tbody.broken .side{background:repeating-linear-gradient(160deg,#ffc94d 0 5px,#ff8a3d 5px 10px);filter:drop-shadow(0 0 4px #ffc94d)}
+.tbody.broken::before{content:'🛗';position:absolute;top:-34px;left:50%;transform:translateX(-50%);font-size:18px;z-index:3;animation:blink .5s infinite alternate}
+.tbody.broken::after{content:'🛝';position:absolute;bottom:-4px;right:-16px;font-size:15px;z-index:3}
+.wk.climb{animation:climb .25s infinite alternate}
+.wk.slide{box-shadow:0 -12px 8px 1px currentColor;width:7px;height:7px}
+@keyframes climb{to{margin-left:3px}}
+#tapBtn{position:absolute;left:71%;top:42%;transform:translate(-50%,-50%);z-index:6;border:3px solid #fff;border-radius:18px;padding:10px 16px;
+  font:800 16px Rubik,system-ui;color:#2b1d00;background:linear-gradient(#ffe08a,#ffc94d);box-shadow:0 6px 0 #8f6208,0 12px 24px #000a;white-space:nowrap;animation:pulse .7s infinite;touch-action:manipulation}
+#tapBtn small{display:block;font-size:11px;font-weight:600}
+#tapBtn.hit{transform:translate(-50%,-46%) scale(.94)}
 </style>
 </head>
 <body>
@@ -341,6 +354,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
     <div id="rain"></div><div id="ground"></div><div id="rushGlow"></div>
     <div id="ovl"><span class="evchip hidden" id="hEvent"></span><span class="sp"></span><span class="chchip hidden" id="hCh"></span><span class="chip combo hidden" id="hCombo">x1</span></div>
     <div id="atk" class="hidden"><span class="stk" id="atkStk"></span><button class="abtn" id="atkVip">👔 VIP</button><button class="abtn" id="atkClumsy">🤪 Maladroit</button></div>
+    <button id="tapBtn" class="hidden"></button>
     <div id="banner"></div>
   </div>
   <div id="tickets"></div>
@@ -415,6 +429,7 @@ const EVENTS={
   ceo:{label:'👔 Visite du PDG',dur:25,tower:true,rate:1},
   move:{label:'📦 Déménagement',dur:25,rate:1.5},
   storm:{label:'⛈️ Orage',dur:22,rate:1.4},
+  elevator:{label:'🛗 Ascenseur en panne',dur:25,tower:true,rate:1},
 };
 const CHALLENGES={
   nowrong:{label:()=>'Zéro erreur de métier',reward:80,end:g=>g.wrong===0},
@@ -533,7 +548,7 @@ function renderBrief(){
     "La Tour B fait 22 étages : les interventions là-haut prennent du temps. Pense à embaucher.",
     "🔗 Les tickets en chaîne : une fois la 1re intervention terminée, une 2e demande arrive au même étage.",
     "😤 Les râleurs reviennent souvent et sont de moins en moins patients à chaque visite.",
-    "⚡👔📦⛈️ Un événement surprise peut tomber à tout moment. Garde des intervenants en réserve !",
+    "⚡👔📦⛈️🛗 Un événement surprise peut tomber à tout moment. Ascenseur en panne ? Tapote l'écran pour faire monter tes agents par l'escalier !",
   ];
   $('#briefBody').innerHTML=`
     <div class="logo" style="font-size:clamp(28px,9vw,36px)">${dayName(S.day)}</div>
@@ -754,13 +769,27 @@ function checkChallenges(){
   }
 }
 function startEvent(id){
-  const d=EVENTS[id],bi=rint(0,G.n-1);
+  const d=EVENTS[id];let bi=rint(0,G.n-1);
+  if(id==='elevator'&&G.n>1&&Math.random()<.6)bi=1;
   G.event={id,bi,until:G.t+d.dur,label:d.label+(d.tower?' · '+BUILDINGS[bi].name:'')};
   banner(G.event.label+' !');sfx('urg');buzz([80,60,80]);
   if(id==='blackout'){const n=3+Math.min(3,Math.floor(G.D/3));for(let i=0;i<n;i++)G.queue.push({at:G.t+.3+i*.7,bi,o:{trade:'elec',msg:pick(BLACKOUT),urgent:i===0}});}
   if(id==='storm')$('#towers').classList.add('storm');
+  if(id==='elevator')setTimeout(()=>{if(G&&G.event&&G.event.id==='elevator')banner('👆 Tapote l\'écran pour monter !');},2400);
 }
-function endEvent(){if(G.event.id==='storm')$('#towers').classList.remove('storm');G.event=null;}
+function endEvent(){if(G.event.id==='storm')$('#towers').classList.remove('storm');if(G.event.id==='elevator'){banner('🛗 Ascenseur réparé !');sfx('ok');}G.event=null;}
+const broken=bi=>!!(G&&G.event&&G.event.id==='elevator'&&G.event.bi===bi);
+const climbing=w=>w.busy&&broken(w.tk.bi)&&w.tk.floor>0&&w.e<w.go;
+// Escalier : chaque tapotement fait monter d'un étage tous les agents bloqués
+function stairTap(){
+  if(!G||!G.running||G.paused)return;
+  const ws=G.workers.filter(climbing);if(!ws.length)return;
+  ws.forEach(w=>{w.e=Math.min(w.go,w.e+w.go/w.tk.floor);});
+  const b=$('#tapBtn');b.classList.remove('hit');void b.offsetWidth;b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),80);
+  if(SOUND&&ensureAC()){try{tone(rnd(700,900),AC.currentTime,.05,'square',.04);}catch(e){}}
+  buzz(8);
+}
+$('#towers').addEventListener('pointerdown',e=>{if(e.target.closest('#atk'))return;if(G&&G.event&&G.event.id==='elevator'){e.preventDefault();stairTap();}});
 
 function step(dt){
   G.t+=dt;
@@ -798,7 +827,12 @@ function step(dt){
   // intervenants
   for(const w of G.workers){
     if(!w.busy)continue;
-    w.e+=dt;
+    let k=1;
+    if(broken(w.tk.bi)){
+      if(w.tk.floor>0&&w.e<w.go)k=.1;          // escalier : quasi immobile sans tapotage
+      else if(w.e>=w.go+w.fix)k=3;             // toboggan : descente express
+    }
+    w.e+=dt*k;
     if(!w.fixed&&w.e>=w.go+w.fix){
       w.fixed=true;G.sat=Math.min(100,G.sat+(w.tk.urgent?4:1.5));
       const tk=w.tk;
@@ -841,8 +875,12 @@ function render(){
     const vip=!!((G.event&&G.event.id==='ceo'&&G.event.bi===bi)||(G.vipAtk&&G.vipAtk.bi===bi)),dark=!!(G.event&&G.event.id==='blackout'&&G.event.bi===bi);
     if(b.classList.contains('vip')!==vip)b.classList.toggle('vip',vip);
     if(b.classList.contains('dark')!==dark)b.classList.toggle('dark',dark);
+    const br=broken(bi);if(b.classList.contains('broken')!==br)b.classList.toggle('broken',br);
   });
   if(G.mode==='duel')renderDuelHud();
+  const nc=G.workers.filter(climbing).length,tb=$('#tapBtn');
+  tb.classList.toggle('hidden',!nc);
+  if(nc){const txt=`👆 TAPOTE !<small>${nc} agent${nc>1?'s':''} dans l'escalier</small>`;if(tb.innerHTML!==txt)tb.innerHTML=txt;}
   // étages
   const open={},work={};
   G.tickets.forEach(t=>open[t.bi+'-'+t.floor]=(open[t.bi+'-'+t.floor]||0)+(t.urgent?2:1));
@@ -863,6 +901,9 @@ function render(){
     const f=w.tk.floor;let y;
     if(w.e<w.go)y=f*(w.e/w.go);else if(w.e<w.go+w.fix)y=f;else y=f*(1-(w.e-w.go-w.fix)/w.back);
     d.style.bottom=(y*(FH+FG)+FH/2)+'px';
+    const cl=climbing(w),sl=broken(w.tk.bi)&&w.e>=w.go+w.fix;
+    if(d.classList.contains('climb')!==cl)d.classList.toggle('climb',cl);
+    if(d.classList.contains('slide')!==sl)d.classList.toggle('slide',sl);
   });
   for(const id in wkEls)if(!seen[id]){wkEls[id].remove();delete wkEls[id];}
   TRADES.forEach(t=>{
