@@ -1,5 +1,5 @@
-// Jeu du HM — service worker : le jeu reste jouable hors connexion.
-const CACHE = 'jeu-du-hm-__VERSION__';
+// Hospitality Managers Challenge — service worker : le jeu reste jouable hors connexion.
+const CACHE = 'hm-challenge-__VERSION__';
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

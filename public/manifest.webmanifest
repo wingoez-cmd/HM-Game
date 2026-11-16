@@ -1,6 +1,6 @@
 {
-  "name": "Jeu du HM",
-  "short_name": "Jeu du HM",
+  "name": "Hospitality Managers Challenge",
+  "short_name": "HM Challenge",
   "description": "Hospitality Manager : dispatche les demandes des salariés au bon intervenant avant que leur patience n'explose.",
   "lang": "fr",
   "start_url": "/",

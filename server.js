@@ -1,4 +1,4 @@
-// Jeu du HM — serveur : sert le jeu et relaie les duels 2 joueurs en WebSocket.
+// Hospitality Managers Challenge — serveur : sert le jeu et relaie les duels 2 joueurs en WebSocket.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -108,4 +108,4 @@ setInterval(() => wss.clients.forEach(ws => {
   ws.alive = false; ws.ping();
 }), 25000);
 
-server.listen(PORT, () => console.log(`Jeu du HM en ligne sur le port ${PORT}`));
+server.listen(PORT, () => console.log(`Hospitality Managers Challenge en ligne sur le port ${PORT}`));

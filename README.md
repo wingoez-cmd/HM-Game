@@ -1,4 +1,4 @@
-# Jeu du HM
+# Hospitality Managers Challenge
 
 Jeu de gestion pour Hospitality Managers : dispatcher les tickets des salariés au bon intervenant sur 5 bâtiments.
 

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#24196b">
-<title>Jeu du HM</title>
+<title>Hospitality Managers Challenge</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Jeu du HM">
+<meta name="apple-mobile-web-app-title" content="HM Challenge">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#120b2e;--panel:#1e1550;--panel2:#2a2070;--txt:#fff8ee;--mut:#b9b2ec;--acc:#ff7ad9;--red:#ff3b5c;--ok:#2ee59d;--warn:#ffb020}
@@ -304,7 +304,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
 <!-- MENU -->
 <section id="menu" class="screen">
   <div class="center">
-    <div class="logo">Jeu du HM</div>
+    <div class="logo" style="line-height:1.05">Hospitality Managers<br><span style="font-size:.62em;letter-spacing:4px">CHALLENGE</span></div>
     <div class="sub">Tu es <b>Hospitality Manager</b>. Les salariés envoient leurs demandes, toi tu dispatches au bon intervenant… avant que leur patience n'explose.</div>
     <div id="defiBox"></div>
     <input class="pseudo" id="pseudo" maxlength="16" placeholder="Ton pseudo de HM" autocomplete="off">
@@ -1004,7 +1004,7 @@ function endDay(ok){
   renderShop();
   $('#btnNext').onclick=()=>{sfx('new');renderBrief();};
   $('#btnMenu').onclick=renderMenu;
-  $('#btnShare').onclick=()=>share(`🏢 J'ai atteint ${fmt(S.score)} pts au Jeu du HM (${dayName(ok?S.day-1:S.day)}) ! Tu ferais mieux ?`,ART_URL);
+  $('#btnShare').onclick=()=>share(`🏢 J'ai atteint ${fmt(S.score)} pts sur Hospitality Managers Challenge (${dayName(ok?S.day-1:S.day)}) ! Tu ferais mieux ?`,ART_URL);
   show('end');$('#endBody').scrollTop=0;
 }
 function endChrono(){
@@ -1028,7 +1028,7 @@ function endChrono(){
       <div class="sharebox" id="shareTxt">${esc(link)}</div></div>
     <button class="big" id="btnDefi">📣 Copier mon lien de défi</button>
     <div class="mrow"><button class="big alt sm" id="btnAgain">🔁 Rejouer</button><button class="big alt sm" id="btnMenu">Menu</button></div>`;
-  $('#btnDefi').onclick=()=>share(`⏱️ J'ai fait ${fmt(sc)} pts en 60 s au Jeu du HM. Bats-moi si tu peux 👉`,link);
+  $('#btnDefi').onclick=()=>share(`⏱️ J'ai fait ${fmt(sc)} pts en 60 s sur Hospitality Managers Challenge. Bats-moi si tu peux 👉`,link);
   $('#btnAgain').onclick=()=>{ensureAC();sfx('day');startGame('chrono');};
   $('#btnMenu').onclick=renderMenu;
   show('end');$('#endBody').scrollTop=0;
@@ -1125,7 +1125,7 @@ function renderDuelWait(){
     <button class="big" id="duelCopy">📣 Copier le lien d'invitation</button>
     <div class="sub" style="text-align:center">⏳ En attente de ton adversaire…</div>
     <button class="big alt sm" id="duelCancel">Annuler</button>`;
-  $('#duelCopy').onclick=()=>share(`⚔️ ${myName()} te défie en duel au Jeu du HM ! Code ${NET.code} 👉`,link);
+  $('#duelCopy').onclick=()=>share(`⚔️ ${myName()} te défie en duel sur Hospitality Managers Challenge ! Code ${NET.code} 👉`,link);
   $('#duelCancel').onclick=()=>{nsend({t:'leave'});netClose();renderDuel();};
   show('duel');
 }
@@ -1190,7 +1190,7 @@ function renderDuelResult(){
 let INSTALL_EVT=null;
 const isStandalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}};
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();INSTALL_EVT=e;});
-window.addEventListener('appinstalled',()=>{INSTALL_EVT=null;toast('✅ Jeu du HM installé !');syncInstall();});
+window.addEventListener('appinstalled',()=>{INSTALL_EVT=null;toast('✅ HM Challenge installé !');syncInstall();});
 if(DUEL_OK&&'serviceWorker' in navigator){try{navigator.serviceWorker.register('/sw.js').catch(()=>{});}catch(e){}}
 function syncInstall(){const b=$('#btnInstall');if(b)b.classList.toggle('hidden',isStandalone());}
 $('#btnInstall').onclick=async()=>{
@@ -1202,12 +1202,12 @@ $('#btnInstall').onclick=async()=>{
     <div class="box"><h3>${ios?'Sur iPhone (Safari)':'Sur Android (Chrome)'}</h3>${ios
       ?'1. Ouvre le jeu dans <b>Safari</b>.<br>2. Appuie sur le bouton <b>Partager</b> (carré avec une flèche).<br>3. Choisis <b>« Sur l\'écran d\'accueil »</b>, puis <b>Ajouter</b>.'
       :'1. Ouvre le jeu dans <b>Chrome</b>.<br>2. Appuie sur le menu <b>⋮</b> en haut à droite.<br>3. Choisis <b>« Ajouter à l\'écran d\'accueil »</b> ou <b>« Installer l\'application »</b>.'}
-      <br><br>L'icône du Jeu du HM apparaît avec tes autres apps. Il s'ouvre en plein écran et la campagne marche même sans réseau.</div>
+      <br><br>L'icône HM Challenge apparaît avec tes autres apps. Il s'ouvre en plein écran et la campagne marche même sans réseau.</div>
     <div class="box"><h3>${ios?'Sur Android (Chrome)':'Sur iPhone (Safari)'}</h3>${ios
       ?'Menu <b>⋮</b> → <b>« Installer l\'application »</b>.'
       :'Bouton <b>Partager</b> → <b>« Sur l\'écran d\'accueil »</b>.'}</div>
     <button class="big alt sm" id="instBack">Menu</button>`;
-  const c=$('#instCopy');if(c)c.onclick=()=>share('🏢 Le Jeu du HM :',RAILWAY_URL);
+  const c=$('#instCopy');if(c)c.onclick=()=>share('🏢 Hospitality Managers Challenge :',RAILWAY_URL);
   $('#instBack').onclick=renderMenu;show('duel');
 };
 syncInstall();
