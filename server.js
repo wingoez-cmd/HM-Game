@@ -44,7 +44,7 @@ function newCode() {
 function send(ws, o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
 function start(r) {
   r.ready = new Set();
-  r.p.forEach((p, i) => send(p, { t: 'start', me: r.names[i], opp: r.names[1 - i], delay: 3500 }));
+  r.p.forEach((p, i) => send(p, { t: 'start', me: r.names[i], opp: r.names[1 - i], lvl: r.lvl, delay: 3500 }));
 }
 function leave(ws) {
   const c = ws.room; if (!c) return;
@@ -67,7 +67,8 @@ wss.on('connection', ws => {
       case 'create': {
         leave(ws);
         const c = newCode();
-        rooms.set(c, { p: [ws], names: [name], ready: new Set() });
+        const lvl = ['deb', 'conf', 'exp'].includes(m.lvl) ? m.lvl : 'deb';
+        rooms.set(c, { p: [ws], names: [name], ready: new Set(), lvl });
         ws.room = c; send(ws, { t: 'created', code: c });
         break;
       }

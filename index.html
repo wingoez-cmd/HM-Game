@@ -309,6 +309,15 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
 #tapBtn small{display:block;font-size:11px;font-weight:600}
 #tapBtn.hit{transform:translate(-50%,-46%) scale(.94)}
 .card.enter{animation:in .3s cubic-bezier(.3,1.5,.5,1)}
+
+/* ===== V13 : niveaux ===== */
+.lvl{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.lvl button{border:0;border-radius:14px;padding:9px 4px 8px;font:800 13px Rubik,system-ui;color:#fff;background:linear-gradient(180deg,#34428a,#253170);box-shadow:inset 0 1px 0 #ffffff30,0 4px 0 #141b45}
+.lvl button b{display:block;font-size:22px;line-height:1.2}
+.lvl button small{display:block;font-weight:600;font-size:10px;color:#b9c2ec;margin-top:2px}
+.lvl button.on{color:#2b1d00;background:linear-gradient(180deg,#ffe08a,#ffc94d);box-shadow:inset 0 2px 0 #fff9,0 4px 0 #8f6208}
+.lvl button.on small{color:#5a3f00}
+.lvltag{display:inline-block;font-size:12px;font-weight:800;padding:2px 8px;border-radius:8px;background:#ffc94d;color:#2b1d00;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -321,6 +330,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
     <div class="sub">Tu es <b>Hospitality Manager</b>. Les salariés envoient leurs demandes, toi tu dispatches au bon intervenant… avant que leur patience n'explose.</div>
     <div id="defiBox"></div>
     <input class="pseudo" id="pseudo" maxlength="16" placeholder="Ton pseudo de HM" autocomplete="off">
+    <div class="lvl" id="lvlSel"></div>
     <button class="big" id="btnContinue"></button>
     <div class="mrow">
       <button class="big alt sm" id="btnChrono">⏱️ Chrono</button>
@@ -461,6 +471,12 @@ const CHALLENGES={
   sat:{label:n=>`Finir à ${n} % de satisfaction`,n:()=>80,reward:80,end:(g,n)=>g.sat>=n},
   grump:{label:n=>`Satisfaire ${n} râleurs 😤`,n:()=>4,reward:90,prog:g=>g.grumpDone},
 };
+// Niveaux : patience des salariés, fréquence des demandes, bonus de points
+const LEVELS={
+  deb:{label:'Débutant',icon:'🌱',desc:'Le temps de lire',pat:1.8,rate:.7,urg:.6,mult:1},
+  conf:{label:'Confirmé',icon:'⭐',desc:'Rythme soutenu',pat:1.35,rate:.85,urg:.85,mult:1.25},
+  exp:{label:'Expert',icon:'🔥',desc:'Rush permanent',pat:1.05,rate:1,urg:1,mult:1.5},
+};
 const rnd=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.length)], rint=(a,b)=>Math.floor(rnd(a,b+1));
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const $=s=>document.querySelector(s);
@@ -471,9 +487,15 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 /* ================== SAUVEGARDE ================== */
 const KEY='jeuDuHM_v1';
 function fresh(){return {day:1,money:150,score:0,staff:{plomb:1,elec:1,manu:1,prop:1},up:{elev:0,cafe:0,outils:0,tri:0,adjoint:0},started:false,run:Date.now(),ch:null};}
-let S=fresh(), BEST=0, SOUND=true, MUSIC_ON=true, PSEUDO='', LB={camp:[],chrono:[]}, BEST_CHRONO=0;
-try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){S=Object.assign(fresh(),d.S||{});BEST=d.best||0;SOUND=d.sound!==false;MUSIC_ON=d.music!==false;PSEUDO=d.pseudo||'';LB=Object.assign({camp:[],chrono:[]},d.lb||{});BEST_CHRONO=d.bestChrono||0;}}catch(e){}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify({S,best:BEST,sound:SOUND,music:MUSIC_ON,pseudo:PSEUDO,lb:LB,bestChrono:BEST_CHRONO}))}catch(e){}}
+let LEVEL='deb', S=fresh(), BEST=0, SOUND=true, MUSIC_ON=true, PSEUDO='', LB={camp:[],chrono:[]}, BEST_CHRONO=0;
+try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){S=Object.assign(fresh(),d.S||{});BEST=d.best||0;SOUND=d.sound!==false;MUSIC_ON=d.music!==false;PSEUDO=d.pseudo||'';LB=Object.assign({camp:[],chrono:[]},d.lb||{});BEST_CHRONO=d.bestChrono||0;if(LEVELS[d.level])LEVEL=d.level;}}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify({S,best:BEST,sound:SOUND,music:MUSIC_ON,pseudo:PSEUDO,lb:LB,bestChrono:BEST_CHRONO,level:LEVEL}))}catch(e){}}
+const L=()=>LEVELS[(G&&G.lvl)||LEVEL]||LEVELS.deb;
+const lvlTag=k=>LEVELS[k]?`${LEVELS[k].icon} ${LEVELS[k].label}`:'';
+function renderLvl(){
+  $('#lvlSel').innerHTML=Object.entries(LEVELS).map(([k,v])=>`<button data-l="${k}" class="${k===LEVEL?'on':''}"><b>${v.icon}</b>${v.label}<small>${v.desc}</small></button>`).join('');
+  $('#lvlSel').querySelectorAll('button').forEach(b=>b.onclick=()=>{LEVEL=b.dataset.l;persist();sfx('new');renderLvl();});
+}
 const myName=()=>PSEUDO.trim()||'HM anonyme';
 
 /* ================== AUDIO ================== */
@@ -531,7 +553,7 @@ function toast(txt){const t=el('div','toast',txt);document.body.appendChild(t);s
 
 // Défi reçu par lien : #defi-pseudo-12345
 let DEFI=null;
-(function(){const m=(location.hash||'').match(/^#defi-([a-z0-9-]{1,24})-(\d{1,7})$/i);if(m)DEFI={who:m[1].replace(/-/g,' '),score:+m[2]};})();
+(function(){const m=(location.hash||'').match(/^#defi-([a-z0-9-]{1,24}?)-(\d{1,7})(?:-(deb|conf|exp))?$/i);if(m){DEFI={who:m[1].replace(/-/g,' '),score:+m[2],lvl:(m[3]||'').toLowerCase()};if(LEVELS[DEFI.lvl])LEVEL=DEFI.lvl;}})();
 const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,16)||'hm';
 
 function renderMenu(){
@@ -539,8 +561,8 @@ function renderMenu(){
   $('#menuMap').innerHTML=bmapHTML(nbB(S.day),-1);
   $('#btnContinue').textContent=S.started?`▶ Campagne · ${dayName(S.day)}`:'▶ Commencer la campagne';
   $('#btnNew').classList.toggle('hidden',!S.started);
-  $('#pseudo').value=PSEUDO;
-  $('#defiBox').innerHTML=DEFI?`<div class="defi">🥊 ${esc(DEFI.who)} te défie : <br><span style="font-size:24px">${fmt(DEFI.score)} pts</span><br>en contre-la-montre. Relève le défi !</div>`:'';
+  $('#pseudo').value=PSEUDO;renderLvl();
+  $('#defiBox').innerHTML=DEFI?`<div class="defi">🥊 ${esc(DEFI.who)} te défie : <br><span style="font-size:24px">${fmt(DEFI.score)} pts</span><br>en contre-la-montre${DEFI.lvl&&LEVELS[DEFI.lvl]?` · niveau ${lvlTag(DEFI.lvl)}`:''}. Relève le défi !</div>`:'';
   show('menu');
 }
 $('#pseudo').addEventListener('input',e=>{PSEUDO=e.target.value.slice(0,16);persist();});
@@ -621,7 +643,7 @@ const adjInt=()=>[0,7,5,3.5][UP('adjoint')];
 
 function startGame(mode){
   const duel=mode==='duel',chrono=mode==='chrono'||duel;
-  G={mode,len:duel?90:chrono?60:DAY_LEN,streak:0,charges:0,vipAtk:null,stT:0,n:chrono?5:nbB(S.day),D:chrono?5:S.day,
+  G={mode,lvl:duel&&NET&&LEVELS[NET.lvl]?NET.lvl:LEVEL,len:duel?90:chrono?60:DAY_LEN,streak:0,charges:0,vipAtk:null,stT:0,n:chrono?5:nbB(S.day),D:chrono?5:S.day,
      t:0,tickets:[],workers:[],sat:100,score:0,money:0,combo:0,lastOk:-99,maxCombo:0,
      resolved:0,expired:0,wrong:0,urgDone:0,chainsDone:0,grumpDone:0,
      sel:null,nid:1,adj:0,per:null,paused:false,running:true,
@@ -635,7 +657,7 @@ function startGame(mode){
   else if(chrono)G.evPlan=[{at:rnd(18,30),id:pick(ev)}];
   else if(S.day>=2){const k=S.day>=6?2:1;const ids=shuffle(ev);for(let i=0;i<k;i++)G.evPlan.push({at:rnd(30+i*55,75+i*55),id:ids[i]});G.evPlan.sort((a,b)=>a.at-b.at);}
   $('#tickets').innerHTML='<div class="empty" id="emptyMsg">Calme plat… pour l\'instant 😌</div>';
-  $('#hDay').textContent=duel?'⚔️ Duel':chrono?'⏱️ Chrono':dayName(S.day);
+  $('#hDay').textContent=(duel?'⚔️ Duel':chrono?'⏱️ Chrono':dayName(S.day))+' '+L().icon;
   $('#hDuel').classList.toggle('hidden',!duel);$('#atk').classList.toggle('hidden',!duel);$('#btnPause').classList.toggle('hidden',duel);
   $('#pause').classList.add('hidden');
   $('#towers').classList.remove('storm','rush');
@@ -723,11 +745,11 @@ function spawn(bi,o={}){
   if(!trade)trade=wpick(w);
   if(!msg)msg=pick(MSG[trade]);
   const b=BUILDINGS[bi];
-  const urgent=o.urgent!=null?o.urgent:(G.D>=2&&Math.random()<.06+.012*Math.min(10,G.D));
+  const urgent=o.urgent!=null?o.urgent:(G.D>=2&&Math.random()<(.06+.012*Math.min(10,G.D))*L().urg);
   let who=o.who,av=o.av,grump=!!o.grump;
   if(!who){if(G.grumps.length&&Math.random()<.22){const g=pick(G.grumps);who=g.n;av=g.a;grump=true;}else{who=pick(NAMES);av=avOf(who);}}
   const visits=G.visits[who]=(G.visits[who]||0)+1;
-  let max=(urgent?11:21)*(1+.15*UP('cafe'))*Math.max(.72,1-.03*(G.D-1));
+  let max=(urgent?11:21)*L().pat*(1+.15*UP('cafe'))*Math.max(.72,1-.03*(G.D-1));
   if(grump)max*=Math.max(.5,.95-.1*(visits-1));
   const atkVip=!!(G.vipAtk&&G.vipAtk.bi===bi);
   const vip=!!(o.vip||atkVip||(ev&&ev.id==='ceo'&&ev.bi===bi));if(vip)max*=atkVip||o.vip?.6:.75;
@@ -803,7 +825,7 @@ function dispatch(tid){
   G.streak++;
   if(G.mode==='duel'&&G.streak%10===0){G.charges++;setTimeout(()=>{if(G)banner('⚔️ 10 d\'affilée ! Attaque prête');},300);sfx('chain');buzz([40,40,40]);}
   const mult=1+Math.min(20,G.combo-1)*.1;
-  const pts=Math.round((100+60*t.left/t.max)*(t.urgent?2:1)*(t.vip?3:1)*mult);
+  const pts=Math.round((100+60*t.left/t.max)*(t.urgent?2:1)*(t.vip?3:1)*mult*L().mult);
   floatAt(t.el,`+${pts}${mult>1?' x'+mult.toFixed(1):''}  +${t.urgent?25:12}€`,t.urgent||t.vip?'#ffd23f':'#86efac');
   sfx(G.combo>=3&&G.combo%3===0?'combo':'ok');buzz(15);
   burst(t.el,G.combo>=3?['#ffc94d','#ffe39a','#fff']:[T[tid].color,'#fff']);
@@ -860,7 +882,7 @@ function step(dt){
   if(G.t<G.len-4){
     const evr=G.event?EVENTS[G.event.id].rate:1;
     const base=G.mode!=='camp'?.34:S.day===1?.36:.28;
-    const rate=base*per.k*diff()*evr/(1+.25*(G.n-1));
+    const rate=base*per.k*diff()*evr*L().rate/(1+.25*(G.n-1));
     for(let bi=0;bi<G.n;bi++)if(Math.random()<rate*dt)spawn(bi);
   }
   // jamais plus de 2,5 s sans demande à l'écran
@@ -971,7 +993,7 @@ function render(){
 function addLb(kind,score,extra){
   const list=LB[kind];
   if(kind==='camp'){const i=list.findIndex(r=>r.run===S.run);const row={p:myName(),s:score,d:Date.now(),run:S.run,x:extra};if(i>=0)list[i]=row;else list.push(row);}
-  else list.push({p:myName(),s:score,d:Date.now()});
+  else list.push({p:myName(),s:score,d:Date.now(),x:extra});
   list.sort((a,b)=>b.s-a.s);LB[kind]=list.slice(0,10);
 }
 function finish(ok){
@@ -992,7 +1014,7 @@ function endDay(ok){
   S.money+=g.money+bonus+chGain;
   const dayPlayed=S.day;
   if(ok){S.score+=g.score;S.day++;}
-  addLb('camp',S.score,`Jour ${ok?S.day-1:S.day}`);
+  addLb('camp',S.score,`Jour ${ok?S.day-1:S.day} · ${lvlTag(G.lvl)}`);
   let record=false;if(S.score>BEST){BEST=S.score;record=true;}
   persist();
   sfx(ok?'day':'exp');
@@ -1023,8 +1045,8 @@ function endDay(ok){
 function endChrono(){
   const g=G,sc=g.score;
   const prev=BEST_CHRONO;let record=false;if(sc>BEST_CHRONO){BEST_CHRONO=sc;record=true;}
-  addLb('chrono',sc);persist();sfx('day');
-  const link=`${ART_URL}#defi-${slug(myName())}-${sc}`;
+  addLb('chrono',sc,lvlTag(G.lvl));persist();sfx('day');
+  const link=`${RAILWAY_URL?RAILWAY_URL+'/':ART_URL}#defi-${slug(myName())}-${sc}-${G.lvl}`;
   let vs='';
   if(DEFI)vs=`<div class="defi" style="animation:none">${sc>DEFI.score?`🏆 Tu as battu ${esc(DEFI.who)} de ${fmt(sc-DEFI.score)} pts !`:`😬 Encore ${fmt(DEFI.score-sc+1)} pts pour battre ${esc(DEFI.who)}…`}</div>`;
   $('#endBody').innerHTML=`
@@ -1092,7 +1114,7 @@ function onNet(m){
   switch(m.t){
     case 'created':NET.code=m.code;renderDuelWait();break;
     case 'error':duelMsg(m.msg);break;
-    case 'start':NET.opp=String(m.opp||'Adversaire').slice(0,16);NET.oppEnd=null;NET.os={score:0,sat:100,streak:0};NET.left=false;NET.rematch=false;duelCountdown(m.delay||3500);break;
+    case 'start':NET.opp=String(m.opp||'Adversaire').slice(0,16);NET.lvl=LEVELS[m.lvl]?m.lvl:LEVEL;NET.oppEnd=null;NET.os={score:0,sat:100,streak:0};NET.left=false;NET.rematch=false;duelCountdown(m.delay||3500);break;
     case 'opp':NET.os={score:+m.score||0,sat:+m.sat||0,streak:+m.streak||0};break;
     case 'atk':if(G&&G.mode==='duel'&&G.running)receiveAttack(m.kind,String(m.from||'ton adversaire').slice(0,16));break;
     case 'oppend':NET.oppEnd=+m.score||0;if(G&&G.mode==='duel'&&!G.running)renderDuelResult();break;
@@ -1117,13 +1139,14 @@ function renderDuel(prefill){
       👔 <b>un VIP</b> : il visite une de ses tours, ses demandes sont pressées et comptent triple ;<br>
       🤪 <b>un visiteur maladroit</b> : il sème 5 catastrophes d'un coup.<br>Une erreur ou un salarié abandonné remet ta série à zéro.</div>
     <input class="pseudo" id="duelPseudo" maxlength="16" placeholder="Ton pseudo de HM" value="${esc(PSEUDO)}">
+    <div class="sub" style="text-align:center">Si tu crées la partie, elle se joue en <span class="lvltag">${lvlTag(LEVEL)}</span><br><small>(niveau à changer dans le menu)</small></div>
     <button class="big" id="duelCreate">Créer une partie</button>
     <div class="box"><h3>Rejoindre un ami</h3>
       <div class="mrow"><input class="pseudo" id="duelCode" maxlength="4" placeholder="CODE" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800" value="${esc(prefill||'')}"><button class="big alt sm" id="duelJoin">Rejoindre</button></div>
       <div id="duelErr" style="color:#ff6b81;margin-top:8px;font-weight:700"></div></div>
     <button class="big alt sm" id="duelBack">Menu</button>`;
   $('#duelPseudo').oninput=e=>{PSEUDO=e.target.value.slice(0,16);persist();};
-  $('#duelCreate').onclick=()=>{ensureAC();netConnect(()=>nsend({t:'create',name:myName()}));};
+  $('#duelCreate').onclick=()=>{ensureAC();netConnect(()=>nsend({t:'create',name:myName(),lvl:LEVEL}));};
   $('#duelJoin').onclick=()=>{ensureAC();const c=$('#duelCode').value.trim().toUpperCase();if(c.length!==4)return duelMsg('Le code fait 4 caractères');netConnect(()=>nsend({t:'join',code:c,name:myName()}));};
   $('#duelBack').onclick=()=>{netClose();renderMenu();};
   show('duel');
@@ -1134,6 +1157,7 @@ function renderDuelWait(){
     <div class="logo" style="font-size:clamp(28px,9vw,36px)">⚔️ Duel</div>
     <div class="sub" style="text-align:center">Donne ce code à ton ami :</div>
     <div class="code">${NET.code}</div>
+    <div style="text-align:center"><span class="lvltag">Niveau ${lvlTag(LEVEL)}</span></div>
     <div class="box">Ou envoie-lui ce lien :<div class="sharebox">${esc(link)}</div></div>
     <button class="big" id="duelCopy">📣 Copier le lien d'invitation</button>
     <div class="sub" style="text-align:center">⏳ En attente de ton adversaire…</div>
@@ -1145,7 +1169,7 @@ function renderDuelWait(){
 function duelCountdown(ms){
   loopTok++;if(G)G.running=false;musicStop();
   let n=3;
-  const draw=()=>{$('#duelBody').innerHTML=`<div class="vs" style="margin-top:30px"><div>Toi<b>${esc(myName())}</b></div><div style="font-size:28px">VS</div><div>Adversaire<b>${esc(NET.opp)}</b></div></div><div class="count">${n}</div>`;};
+  const draw=()=>{$('#duelBody').innerHTML=`<div style="text-align:center;margin-top:16px"><span class="lvltag">Niveau ${lvlTag(NET.lvl)}</span></div><div class="vs" style="margin-top:20px"><div>Toi<b>${esc(myName())}</b></div><div style="font-size:28px">VS</div><div>Adversaire<b>${esc(NET.opp)}</b></div></div><div class="count">${n}</div>`;};
   draw();show('duel');sfx('urg');
   const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);sfx('day');startGame('duel');}else{draw();sfx('urg');}},Math.max(800,ms/3.5));
 }
