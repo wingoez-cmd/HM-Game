@@ -99,7 +99,7 @@ button{font-family:inherit;cursor:pointer}
 #banner.on{opacity:1;transform:translateX(-50%) scale(1) rotate(-2deg)}
 #tickets{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#1a1248,#120b2e);box-shadow:inset 0 8px 14px #0007}
 .empty{color:var(--mut);text-align:center;margin-top:24px;font-size:15px}
-.card{border-radius:14px;padding:8px 11px 9px 15px;position:relative;flex-shrink:0;animation:in .3s cubic-bezier(.3,1.5,.5,1);
+.card{border-radius:14px;padding:8px 11px 9px 15px;position:relative;flex-shrink:0;
   background:linear-gradient(160deg,#3a2f95,#2a2172);box-shadow:inset 0 1px 0 #ffffff30,0 4px 0 #140e40,0 8px 14px #0006;transition:transform .15s,box-shadow .15s}
 .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:7px;border-radius:14px 0 0 14px;background:var(--bc);box-shadow:inset -1px 0 0 #0003}
 .card.sel{transform:translateY(-2px) scale(1.015);background:linear-gradient(160deg,#5b48d9,#3c2fae);box-shadow:inset 0 1px 0 #ffffff50,0 0 0 3px #ffd23f,0 6px 0 #1d1566,0 12px 22px #000a}
@@ -289,6 +289,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
   font:800 16px Rubik,system-ui;color:#2b1d00;background:linear-gradient(#ffe08a,#ffc94d);box-shadow:0 6px 0 #8f6208,0 12px 24px #000a;white-space:nowrap;animation:pulse .7s infinite;touch-action:manipulation}
 #tapBtn small{display:block;font-size:11px;font-weight:600}
 #tapBtn.hit{transform:translate(-50%,-46%) scale(.94)}
+.card.enter{animation:in .3s cubic-bezier(.3,1.5,.5,1)}
 </style>
 </head>
 <body>
@@ -703,10 +704,19 @@ function makeCard(t){
     <div class="top">${t.urgent?'🚨':''}<span class="loc">${b.id} · ${t.floor===0?'RDC':t.floor+'e'}</span><span class="av">${t.av}</span><span>${t.who}</span>${t.grump&&t.visits>1?`<span class="tag grump">😤 ${t.visits}e fois</span>`:t.grump?'<span class="tag grump">😤 râleur</span>':''}${t.chain?`<span class="tag chain">🔗 ${t.chain.step+1}/2</span>`:''}${t.vip?'<span class="tag vip">👔 x3</span>':''}${t.clumsy?'<span class="tag clumsy">🤪 maladroit</span>':''}${showHint()?`<span class="hint">${T[t.trade].icon}</span>`:''}</div>
     <div class="msg">« ${t.msg} »</div><div class="bar"><i></i></div>`);
   c.style.setProperty('--bc',`linear-gradient(${b.c[0]},${b.c[2]})`);
+  c.classList.add('enter');c.addEventListener('animationend',()=>c.classList.remove('enter'),{once:true});
   c.addEventListener('pointerdown',()=>select(t.id));
   t.el=c;t.barEl=c.querySelector('.bar i');
 }
-function sortCards(){G.tickets.sort((a,b)=>a.left-b.left);const box=$('#tickets');G.tickets.forEach(t=>box.appendChild(t.el));}
+function sortCards(){
+  G.tickets.sort((a,b)=>a.left-b.left);
+  const box=$('#tickets');let ref=box.firstElementChild;
+  for(const t of G.tickets){
+    while(ref&&(ref.classList.contains('done')||ref.classList.contains('gone')||ref.id==='emptyMsg'))ref=ref.nextElementSibling;
+    if(ref===t.el){ref=ref.nextElementSibling;continue;}
+    box.insertBefore(t.el,ref);
+  }
+}
 function select(id){
   G.sel=id;G.tickets.forEach(t=>t.el.classList.toggle('sel',t.id===id));
   const t=G.tickets.find(t=>t.id===id);
