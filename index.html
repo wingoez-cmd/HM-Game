@@ -258,6 +258,24 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
 /* pictos métier toujours lisibles, même quand personne n'est dispo */
 .dbtn.off{filter:saturate(.35) brightness(.78)}
 .dbtn .ic{opacity:1}
+
+/* ===== V6 : duel ===== */
+.duelrow{font-size:12px;font-weight:700;background:#0004;border-radius:10px;padding:4px 8px;box-shadow:inset 0 1px 3px #0006;justify-content:space-between}
+.duelrow .lead{font-weight:800}.duelrow .up{color:#4fd69c}.duelrow .down{color:#ff6b81}
+#atk{position:absolute;left:6px;right:6px;bottom:28px;display:flex;gap:6px;align-items:center;z-index:4}
+#atk .stk{font-size:12px;font-weight:800;background:#000a;color:#fff;border-radius:10px;padding:5px 8px;white-space:nowrap}
+#atk .stk i{display:inline-block;height:6px;width:46px;border-radius:3px;background:#ffffff30;vertical-align:middle;margin-left:5px;overflow:hidden;position:relative}
+#atk .stk i b{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ffe08a,#ffc94d)}
+.abtn{flex:1;border:0;border-radius:12px;padding:7px 4px;font:800 12px Rubik,system-ui;color:#2b1d00;background:linear-gradient(#ffe08a,#ffc94d);box-shadow:inset 0 2px 0 #fff9,0 4px 0 #8f6208,0 6px 12px #0007}
+.abtn:disabled{background:#2a3577cc;color:#8d97c7;box-shadow:0 3px 0 #141b45}
+.abtn.ready{animation:pulse .8s infinite}
+.abtn:active{transform:translateY(3px)}
+.code{font-size:56px;font-weight:800;letter-spacing:10px;text-align:center;color:#ffc94d;text-shadow:0 3px 0 #7a5208,0 6px 14px #0008}
+.count{font-size:120px;font-weight:800;text-align:center;color:#fff;text-shadow:0 5px 0 #c08414,0 10px 20px #0009;animation:pop .9s ease-out}
+@keyframes pop{from{transform:scale(1.8);opacity:0}}
+.vs{display:flex;align-items:center;justify-content:space-around;text-align:center;font-weight:800}
+.vs b{display:block;font-size:30px;color:#ffc94d}
+.tag.clumsy{background:linear-gradient(#d9d2ff,#9b8cff);color:#1d1550}
 </style>
 </head>
 <body>
@@ -275,6 +293,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
       <button class="big alt sm" id="btnChrono">⏱️ Chrono</button>
       <button class="big alt sm" id="btnLb">🏆 Classement</button>
     </div>
+    <button class="big alt" id="btnDuel">⚔️ Duel à 2 joueurs</button>
     <div class="box">
       <h3>Comment jouer</h3>
       1. Lis le message du salarié sélectionné.<br>
@@ -312,6 +331,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
       <span class="chip" id="hScore">0</span>
       <span class="chip" id="hMoney">0 €</span>
     </div>
+    <div class="row duelrow hidden" id="hDuel"></div>
   </div>
   <div id="towers">
     <div id="sky"></div><div id="sun"></div>
@@ -320,6 +340,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
     <div class="cloud" style="top:28px;width:26px;animation-duration:45s;animation-delay:-34s;opacity:.8"></div>
     <div id="rain"></div><div id="ground"></div><div id="rushGlow"></div>
     <div id="ovl"><span class="evchip hidden" id="hEvent"></span><span class="sp"></span><span class="chchip hidden" id="hCh"></span><span class="chip combo hidden" id="hCombo">x1</span></div>
+    <div id="atk" class="hidden"><span class="stk" id="atkStk"></span><button class="abtn" id="atkVip">👔 VIP</button><button class="abtn" id="atkClumsy">🤪 Maladroit</button></div>
     <div id="banner"></div>
   </div>
   <div id="tickets"></div>
@@ -334,6 +355,7 @@ html,body{background:radial-gradient(circle at 50% 0%,#24306a 0%,transparent 60%
 
 <section id="end" class="screen hidden"><div class="center" id="endBody"></div></section>
 <section id="lb" class="screen hidden"><div class="center" id="lbBody"></div></section>
+<section id="duel" class="screen hidden"><div class="center" id="duelBody"></div></section>
 </div>
 
 <script>
@@ -368,6 +390,9 @@ const CHAINS=[
   [{trade:'elec',msg:"Remplacer tous les luminaires du couloir"},{trade:'manu',msg:"Évacuer les vieux luminaires démontés"}],
   [{trade:'prop',msg:"Grand ménage avant le comité de direction"},{trade:'manu',msg:"Installer la salle pour le comité de direction"}],
 ];
+const VIPMSG={plomb:"Le VIP exige de l'eau chaude tout de suite",elec:"Le VIP veut la clim à 21° et la salle éclairée",manu:"Le VIP réclame un fauteuil plus confortable",prop:"Le VIP a trouvé une tache sur la table"};
+const CLUMSY={plomb:["Le visiteur a bouché les toilettes avec un gobelet","Le visiteur a cassé le robinet en s'y appuyant"],elec:["Le visiteur s'est pris les pieds dans un câble : tout a sauté","Le visiteur a renversé de l'eau sur une multiprise"],manu:["Le visiteur a fait tomber une pile de cartons","Le visiteur a renversé une armoire en reculant"],prop:["Le visiteur a renversé son café sur la moquette","Le visiteur a fait tomber un pot de fleurs"]};
+const RAILWAY_URL='';
 const BLACKOUT=["Plus de lumière à tout l'étage !","Tous les PC se sont éteints d'un coup","L'ascenseur est bloqué, plus de courant","Le serveur de l'étage a coupé","Plus rien ne marche, c'est le noir total"];
 const NAMES=['Sophie','Karim','Julie','Thomas','Nadia','Marc','Léa','Yanis','Claire','Hugo','Inès','Paul','Camille','Mehdi','Emma','Lucas','Fatou','Antoine','Chloé','Rayan','Sarah','Bruno','Manon','Omar'];
 const AVATARS=['👩','👨','👩‍🦰','🧔','👩‍💼','👨‍💼','👩‍💻','👨‍💻','🧑‍🦱','👱‍♀️','👨‍🦱','👩‍🦱'];
@@ -474,7 +499,7 @@ let DEFI=null;
 const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,16)||'hm';
 
 function renderMenu(){
-  musicStop();
+  musicStop();if(G&&G.mode==='duel'){loopTok++;G.running=false;}
   $('#menuMap').innerHTML=bmapHTML(nbB(S.day),-1);
   $('#btnContinue').textContent=S.started?`▶ Campagne · ${dayName(S.day)}`:'▶ Commencer la campagne';
   $('#btnNew').classList.toggle('hidden',!S.started);
@@ -487,6 +512,7 @@ $('#btnContinue').onclick=()=>{ensureAC();sfx('new');renderBrief();};
 $('#btnNew').onclick=()=>{const keep=S.run;S=fresh();persist();sfx('new');renderBrief();};
 $('#btnChrono').onclick=()=>{ensureAC();sfx('day');startGame('chrono');};
 $('#btnLb').onclick=()=>{sfx('new');renderLb('chrono');};
+$('#btnDuel').onclick=()=>{ensureAC();sfx('new');renderDuel();};
 
 function pickChallenges(){
   if(S.ch&&S.ch.day===S.day)return;
@@ -528,18 +554,18 @@ function renderBrief(){
 
 /* ================== PARTIE ================== */
 let G=null, loopTok=0, last=0, floorEls={}, wkEls={}, FH=8, FG=2;
-const UP=k=>G&&G.mode==='chrono'?0:S.up[k];
+const UP=k=>G&&G.mode!=='camp'?0:S.up[k];
 const hourNow=()=>H0+(G.t/G.len)*(H1-H0);
 const periodAt=h=>PERIODS.find(p=>h>=p.from&&h<p.to)||PERIODS[PERIODS.length-1];
-const curPer=()=>G.mode==='chrono'?CHRONO_PER:periodAt(hourNow());
+const curPer=()=>G.mode!=='camp'?CHRONO_PER:periodAt(hourNow());
 const diff=()=>1+0.07*(G.D-1)+(G.D>5?0.1*(G.D-5):0);
-const showHint=()=>G.mode==='chrono'||S.day===1;
+const showHint=()=>G.mode!=='camp'||S.day===1;
 const elevF=()=>Math.pow(.8,UP('elev')), fixF=()=>Math.pow(.8,UP('outils'));
 const adjInt=()=>[0,7,5,3.5][UP('adjoint')];
 
 function startGame(mode){
-  const chrono=mode==='chrono';
-  G={mode,len:chrono?60:DAY_LEN,n:chrono?5:nbB(S.day),D:chrono?5:S.day,
+  const duel=mode==='duel',chrono=mode==='chrono'||duel;
+  G={mode,len:duel?90:chrono?60:DAY_LEN,streak:0,charges:0,vipAtk:null,stT:0,n:chrono?5:nbB(S.day),D:chrono?5:S.day,
      t:0,tickets:[],workers:[],sat:100,score:0,money:0,combo:0,lastOk:-99,maxCombo:0,
      resolved:0,expired:0,wrong:0,urgDone:0,chainsDone:0,grumpDone:0,
      sel:null,nid:1,adj:0,per:null,paused:false,running:true,
@@ -549,15 +575,18 @@ function startGame(mode){
   let wid=1;TRADES.forEach(t=>{for(let i=0;i<staff[t.id];i++)G.workers.push({id:wid++,trade:t.id,busy:false});});
   // événements surprises planifiés
   const ev=Object.keys(EVENTS);
-  if(chrono)G.evPlan=[{at:rnd(18,30),id:pick(ev)}];
+  if(duel)G.evPlan=[];
+  else if(chrono)G.evPlan=[{at:rnd(18,30),id:pick(ev)}];
   else if(S.day>=2){const k=S.day>=6?2:1;const ids=shuffle(ev);for(let i=0;i<k;i++)G.evPlan.push({at:rnd(30+i*55,75+i*55),id:ids[i]});G.evPlan.sort((a,b)=>a.at-b.at);}
   $('#tickets').innerHTML='<div class="empty" id="emptyMsg">Calme plat… pour l\'instant 😌</div>';
-  $('#hDay').textContent=chrono?'⏱️ Chrono':dayName(S.day);
+  $('#hDay').textContent=duel?'⚔️ Duel':chrono?'⏱️ Chrono':dayName(S.day);
+  $('#hDuel').classList.toggle('hidden',!duel);$('#atk').classList.toggle('hidden',!duel);$('#btnPause').classList.toggle('hidden',duel);
   $('#pause').classList.add('hidden');
   $('#towers').classList.remove('storm','rush');
   show('game');
   buildTowers();buildDispatch();lastSky=-1;
-  if(chrono)setTimeout(()=>banner('⏱️ 60 s · 5 tours · GO !'),200);
+  if(duel)setTimeout(()=>banner(`⚔️ Duel contre ${NET.opp} · GO !`),200);
+  else if(chrono)setTimeout(()=>banner('⏱️ 60 s · 5 tours · GO !'),200);
   musicStart();
   const tok=++loopTok;last=performance.now();
   requestAnimationFrame(function loop(now){
@@ -644,8 +673,9 @@ function spawn(bi,o={}){
   const visits=G.visits[who]=(G.visits[who]||0)+1;
   let max=(urgent?11:21)*(1+.15*UP('cafe'))*Math.max(.72,1-.03*(G.D-1));
   if(grump)max*=Math.max(.5,.95-.1*(visits-1));
-  const vip=!!(ev&&ev.id==='ceo'&&ev.bi===bi);if(vip)max*=.75;
-  const t={id:G.nid++,bi,floor:o.floor!=null?o.floor:rint(0,b.floors),trade,msg,who,av,grump,visits,urgent,max,left:max,chain,vip};
+  const atkVip=!!(G.vipAtk&&G.vipAtk.bi===bi);
+  const vip=!!(o.vip||atkVip||(ev&&ev.id==='ceo'&&ev.bi===bi));if(vip)max*=atkVip||o.vip?.6:.75;
+  const t={id:G.nid++,bi,floor:o.floor!=null?o.floor:rint(0,b.floors),trade,msg,who,av,grump,visits,urgent,max,left:max,chain,vip,clumsy:!!o.clumsy};
   G.tickets.push(t);makeCard(t);sortCards();
   if(!G.sel)select(t.id);
   sfx(urgent?'urg':'new');
@@ -655,7 +685,7 @@ function makeCard(t){
   const em=$('#emptyMsg');if(em)em.remove();
   const b=BUILDINGS[t.bi];
   const c=el('div','card'+(t.urgent?' urg':'')+(t.vip?' vipc':''),`
-    <div class="top">${t.urgent?'🚨':''}<span class="loc">${b.id} · ${t.floor===0?'RDC':t.floor+'e'}</span><span class="av">${t.av}</span><span>${t.who}</span>${t.grump&&t.visits>1?`<span class="tag grump">😤 ${t.visits}e fois</span>`:t.grump?'<span class="tag grump">😤 râleur</span>':''}${t.chain?`<span class="tag chain">🔗 ${t.chain.step+1}/2</span>`:''}${t.vip?'<span class="tag vip">👔 x3</span>':''}${showHint()?`<span class="hint">${T[t.trade].icon}</span>`:''}</div>
+    <div class="top">${t.urgent?'🚨':''}<span class="loc">${b.id} · ${t.floor===0?'RDC':t.floor+'e'}</span><span class="av">${t.av}</span><span>${t.who}</span>${t.grump&&t.visits>1?`<span class="tag grump">😤 ${t.visits}e fois</span>`:t.grump?'<span class="tag grump">😤 râleur</span>':''}${t.chain?`<span class="tag chain">🔗 ${t.chain.step+1}/2</span>`:''}${t.vip?'<span class="tag vip">👔 x3</span>':''}${t.clumsy?'<span class="tag clumsy">🤪 maladroit</span>':''}${showHint()?`<span class="hint">${T[t.trade].icon}</span>`:''}</div>
     <div class="msg">« ${t.msg} »</div><div class="bar"><i></i></div>`);
   c.style.setProperty('--bc',`linear-gradient(${b.c[0]},${b.c[2]})`);
   c.addEventListener('pointerdown',()=>select(t.id));
@@ -695,7 +725,7 @@ function dispatch(tid){
   const t=G.tickets.find(x=>x.id===G.sel),btn=$('#db_'+tid);
   if(!t)return;
   if(t.trade!==tid){
-    G.wrong++;G.combo=0;G.sat-=3;t.left-=t.max*.25;
+    G.wrong++;G.combo=0;G.streak=0;G.sat-=3;t.left-=t.max*.25;
     t.el.classList.remove('shake');void t.el.offsetWidth;t.el.classList.add('shake');
     floatAt(t.el,'Mauvais métier ! -3 😠','#ff4d6d');sfx('bad');buzz(120);
     return;
@@ -705,6 +735,8 @@ function dispatch(tid){
   assign(t,w);
   if(G.t-G.lastOk<3.2)G.combo++;else G.combo=1;
   G.lastOk=G.t;G.maxCombo=Math.max(G.maxCombo,G.combo);
+  G.streak++;
+  if(G.mode==='duel'&&G.streak%10===0){G.charges++;setTimeout(()=>{if(G)banner('⚔️ 10 d\'affilée ! Attaque prête');},300);sfx('chain');buzz([40,40,40]);}
   const mult=1+Math.min(20,G.combo-1)*.1;
   const pts=Math.round((100+60*t.left/t.max)*(t.urgent?2:1)*(t.vip?3:1)*mult);
   floatAt(t.el,`+${pts}${mult>1?' x'+mult.toFixed(1):''}  +${t.urgent?25:12}€`,t.urgent||t.vip?'#ffd23f':'#86efac');
@@ -740,6 +772,8 @@ function step(dt){
   // événements
   if(!G.event&&G.evPlan.length&&G.t>=G.evPlan[0].at)startEvent(G.evPlan.shift().id);
   if(G.event&&G.t>=G.event.until)endEvent();
+  if(G.vipAtk&&G.t>=G.vipAtk.until)G.vipAtk=null;
+  if(G.mode==='duel'){G.stT+=dt;if(G.stT>=.5){G.stT=0;nsend({t:'st',score:G.score,sat:Math.round(G.sat),streak:G.streak});}}
   if(G.event&&G.event.id==='storm'&&Math.random()<dt*.25){const tw=$('#towers');tw.classList.add('flash');setTimeout(()=>tw.classList.remove('flash'),90);}
   // file de tickets programmés (chaînes, coupure)
   for(let i=G.queue.length-1;i>=0;i--){const q=G.queue[i];if(G.t>=q.at){G.queue.splice(i,1);spawn(q.bi,q.o);}}
@@ -754,7 +788,7 @@ function step(dt){
   for(const t of [...G.tickets]){
     t.left-=dt;
     if(t.left<=0){
-      G.expired++;G.combo=0;const pen=t.urgent||t.vip?14:t.grump?11:8;G.sat-=pen;
+      G.expired++;G.combo=0;G.streak=0;const pen=t.urgent||t.vip?14:t.grump?11:8;G.sat-=pen;
       floatAt(t.el,`${t.who} ${t.grump?'explose':'est furieux·se'} ! -${pen}`,'#ff4d6d');
       sfx('exp');buzz(200);
       const app=$('#app');app.classList.remove('app-shake');void app.offsetWidth;app.classList.add('app-shake');
@@ -786,7 +820,7 @@ function step(dt){
 }
 
 function render(){
-  if(G.mode==='chrono'){const r=Math.max(0,G.len-G.t);$('#hClock').textContent=`0:${String(Math.ceil(r)).padStart(2,'0')}`;paintSky(H0+(G.t/G.len)*(H1-H0));}
+  if(G.mode!=='camp'){const r=Math.max(0,G.len-G.t);const rs=Math.ceil(r);$('#hClock').textContent=`${Math.floor(rs/60)}:${String(rs%60).padStart(2,'0')}`;paintSky(H0+(G.t/G.len)*(H1-H0));}
   else{const h=Math.min(H1,hourNow());paintSky(h);$('#hClock').textContent=`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor((h%1)*60)).padStart(2,'0')}`;}
   const s=Math.max(0,G.sat);
   const sb=$('#hSat');sb.style.width=s+'%';sb.style.background=s>60?'linear-gradient(#7dffc6,#20d68f)':s>30?'linear-gradient(#ffe08a,#ffb020)':'linear-gradient(#ff8a95,#ff2d55)';
@@ -804,10 +838,11 @@ function render(){
   }
   // bâtiments : événements
   G.tb.forEach((b,bi)=>{
-    const vip=!!(G.event&&G.event.id==='ceo'&&G.event.bi===bi),dark=!!(G.event&&G.event.id==='blackout'&&G.event.bi===bi);
+    const vip=!!((G.event&&G.event.id==='ceo'&&G.event.bi===bi)||(G.vipAtk&&G.vipAtk.bi===bi)),dark=!!(G.event&&G.event.id==='blackout'&&G.event.bi===bi);
     if(b.classList.contains('vip')!==vip)b.classList.toggle('vip',vip);
     if(b.classList.contains('dark')!==dark)b.classList.toggle('dark',dark);
   });
+  if(G.mode==='duel')renderDuelHud();
   // étages
   const open={},work={};
   G.tickets.forEach(t=>open[t.bi+'-'+t.floor]=(open[t.bi+'-'+t.floor]||0)+(t.urgent?2:1));
@@ -849,6 +884,7 @@ function addLb(kind,score,extra){
 function finish(ok){
   loopTok++;G.running=false;musicStop();
   if(G.event&&G.event.id==='storm')$('#towers').classList.remove('storm');
+  if(G.mode==='duel'){nsend({t:'end',score:G.score});G.final=G.score;return renderDuelResult();}
   if(G.mode==='chrono')return endChrono();
   endDay(ok);
 }
@@ -942,6 +978,133 @@ function renderShop(){
   });
 }
 
+/* ================== DUEL 2 JOUEURS ================== */
+const DUEL_OK=!!window.DUEL;
+let NET=null;
+function netConnect(onOpen){
+  netClose();
+  let ws;
+  try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');}catch(e){duelMsg('Connexion impossible');return;}
+  NET={ws,code:null,opp:null,os:{score:0,sat:100,streak:0},oppEnd:null,left:false,rematch:false};
+  ws.onopen=onOpen;
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}onNet(m);};
+  ws.onerror=()=>duelMsg('Connexion au serveur impossible');
+  ws.onclose=()=>{if(NET&&NET.ws===ws){NET.closed=true;if(G&&G.mode==='duel'&&G.running)banner('📡 Connexion perdue');}};
+}
+function netClose(){if(NET){try{NET.ws.onclose=null;NET.ws.close();}catch(e){}NET=null;}}
+function nsend(o){try{if(NET&&NET.ws.readyState===1)NET.ws.send(JSON.stringify(o));}catch(e){}}
+function onNet(m){
+  if(!NET)return;
+  switch(m.t){
+    case 'created':NET.code=m.code;renderDuelWait();break;
+    case 'error':duelMsg(m.msg);break;
+    case 'start':NET.opp=String(m.opp||'Adversaire').slice(0,16);NET.oppEnd=null;NET.os={score:0,sat:100,streak:0};NET.left=false;NET.rematch=false;duelCountdown(m.delay||3500);break;
+    case 'opp':NET.os={score:+m.score||0,sat:+m.sat||0,streak:+m.streak||0};break;
+    case 'atk':if(G&&G.mode==='duel'&&G.running)receiveAttack(m.kind,String(m.from||'ton adversaire').slice(0,16));break;
+    case 'oppend':NET.oppEnd=+m.score||0;if(G&&G.mode==='duel'&&!G.running)renderDuelResult();break;
+    case 'left':NET.left=true;if(G&&G.mode==='duel'&&G.running)banner(`🚪 ${NET.opp} a quitté la partie`);else if(!$('#duel').classList.contains('hidden')||(G&&G.mode==='duel'))renderDuelResult();break;
+    case 'rematchreq':toast(`🔁 ${NET.opp} veut une revanche !`);const b=$('#btnRematch');if(b)b.textContent='🔁 Accepter la revanche';break;
+  }
+}
+function duelMsg(txt){const e=$('#duelErr');if(e)e.textContent=txt;else toast(txt);}
+function renderDuel(prefill){
+  if(!DUEL_OK){
+    $('#duelBody').innerHTML=`
+      <div class="logo" style="font-size:clamp(28px,9vw,36px)">⚔️ Duel</div>
+      <div class="box">Le duel se joue en direct entre deux téléphones. Il a besoin du serveur du jeu : ouvre la <b>version en ligne</b> pour défier un ami.
+      ${RAILWAY_URL?`<div class="sharebox">${esc(RAILWAY_URL)}</div>`:'<br><br><small style="color:var(--mut)">La version en ligne arrive très bientôt.</small>'}</div>
+      ${RAILWAY_URL?`<a class="big" style="text-align:center;text-decoration:none;display:block" href="${RAILWAY_URL}" target="_blank" rel="noopener">Ouvrir la version en ligne</a>`:''}
+      <button class="big alt sm" id="duelBack">Menu</button>`;
+    $('#duelBack').onclick=renderMenu;show('duel');return;
+  }
+  $('#duelBody').innerHTML=`
+    <div class="logo" style="font-size:clamp(28px,9vw,36px)">⚔️ Duel</div>
+    <div class="box"><h3>Le principe</h3>90 secondes, 5 tours, chacun sur son téléphone. Enchaîne <b>10 réussites d'affilée</b> pour envoyer chez ton adversaire :<br>
+      👔 <b>un VIP</b> : il visite une de ses tours, ses demandes sont pressées et comptent triple ;<br>
+      🤪 <b>un visiteur maladroit</b> : il sème 5 catastrophes d'un coup.<br>Une erreur ou un salarié abandonné remet ta série à zéro.</div>
+    <input class="pseudo" id="duelPseudo" maxlength="16" placeholder="Ton pseudo de HM" value="${esc(PSEUDO)}">
+    <button class="big" id="duelCreate">Créer une partie</button>
+    <div class="box"><h3>Rejoindre un ami</h3>
+      <div class="mrow"><input class="pseudo" id="duelCode" maxlength="4" placeholder="CODE" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800" value="${esc(prefill||'')}"><button class="big alt sm" id="duelJoin">Rejoindre</button></div>
+      <div id="duelErr" style="color:#ff6b81;margin-top:8px;font-weight:700"></div></div>
+    <button class="big alt sm" id="duelBack">Menu</button>`;
+  $('#duelPseudo').oninput=e=>{PSEUDO=e.target.value.slice(0,16);persist();};
+  $('#duelCreate').onclick=()=>{ensureAC();netConnect(()=>nsend({t:'create',name:myName()}));};
+  $('#duelJoin').onclick=()=>{ensureAC();const c=$('#duelCode').value.trim().toUpperCase();if(c.length!==4)return duelMsg('Le code fait 4 caractères');netConnect(()=>nsend({t:'join',code:c,name:myName()}));};
+  $('#duelBack').onclick=()=>{netClose();renderMenu();};
+  show('duel');
+}
+function renderDuelWait(){
+  const link=`${location.origin}/#duel-${NET.code}`;
+  $('#duelBody').innerHTML=`
+    <div class="logo" style="font-size:clamp(28px,9vw,36px)">⚔️ Duel</div>
+    <div class="sub" style="text-align:center">Donne ce code à ton ami :</div>
+    <div class="code">${NET.code}</div>
+    <div class="box">Ou envoie-lui ce lien :<div class="sharebox">${esc(link)}</div></div>
+    <button class="big" id="duelCopy">📣 Copier le lien d'invitation</button>
+    <div class="sub" style="text-align:center">⏳ En attente de ton adversaire…</div>
+    <button class="big alt sm" id="duelCancel">Annuler</button>`;
+  $('#duelCopy').onclick=()=>share(`⚔️ ${myName()} te défie en duel au Jeu du HM ! Code ${NET.code} 👉`,link);
+  $('#duelCancel').onclick=()=>{nsend({t:'leave'});netClose();renderDuel();};
+  show('duel');
+}
+function duelCountdown(ms){
+  loopTok++;if(G)G.running=false;musicStop();
+  let n=3;
+  const draw=()=>{$('#duelBody').innerHTML=`<div class="vs" style="margin-top:30px"><div>Toi<b>${esc(myName())}</b></div><div style="font-size:28px">VS</div><div>Adversaire<b>${esc(NET.opp)}</b></div></div><div class="count">${n}</div>`;};
+  draw();show('duel');sfx('urg');
+  const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);sfx('day');startGame('duel');}else{draw();sfx('urg');}},Math.max(800,ms/3.5));
+}
+function renderDuelHud(){
+  const o=NET?NET.os:{score:0,sat:100},d=G.score-o.score;
+  $('#hDuel').innerHTML=`<span>⚔️ ${esc(NET?NET.opp:'?')} · ⭐ ${fmt(o.score)} · ${o.sat>60?'😊':o.sat>30?'😐':'😠'} ${Math.round(o.sat)} %</span><span class="lead ${d>=0?'up':'down'}">${d>=0?'▲ +':'▼ '}${fmt(d)}</span>`;
+  $('#atkStk').innerHTML=`🔥 ${G.streak%10}/10<i><b style="width:${(G.streak%10)*10}%"></b></i>`;
+  const has=G.charges>0;
+  for(const id of ['atkVip','atkClumsy']){const b=document.getElementById(id);b.disabled=!has;b.classList.toggle('ready',has);}
+  $('#atkVip').textContent=`👔 VIP${G.charges>1?' ×'+G.charges:''}`;
+  $('#atkClumsy').textContent=`🤪 Maladroit${G.charges>1?' ×'+G.charges:''}`;
+}
+function sendAttack(kind,btn){
+  if(!G||G.mode!=='duel'||!G.running||G.charges<=0)return;
+  G.charges--;nsend({t:'atk',kind});
+  floatAt(btn,kind==='vip'?'👔 VIP envoyé !':'🤪 Maladroit envoyé !','#ffc94d');sfx('combo');buzz(30);
+  banner(kind==='vip'?`👔 Ton VIP débarque chez ${NET.opp} !`:`🤪 Ton maladroit file chez ${NET.opp} !`);
+}
+$('#atkVip').addEventListener('pointerdown',e=>{e.preventDefault();sendAttack('vip',e.currentTarget);});
+$('#atkClumsy').addEventListener('pointerdown',e=>{e.preventDefault();sendAttack('clumsy',e.currentTarget);});
+function receiveAttack(kind,from){
+  const app=$('#app');app.classList.remove('app-shake');void app.offsetWidth;app.classList.add('app-shake');
+  buzz([120,60,120]);sfx('urg');
+  if(kind==='vip'){
+    const bi=rint(0,G.n-1);G.vipAtk={bi,until:G.t+15};
+    banner(`👔 Le VIP de ${from} visite la ${BUILDINGS[bi].name} !`);
+    shuffle(TRADES).slice(0,3).forEach((tr,i)=>G.queue.push({at:G.t+.4+i*.8,bi,o:{trade:tr.id,msg:VIPMSG[tr.id],vip:true,who:'Le VIP',av:'🤵'}}));
+  }else{
+    banner(`🤪 Le maladroit de ${from} débarque !`);
+    for(let i=0;i<5;i++){const tr=TRADES[i%4].id;G.queue.push({at:G.t+.3+i*.6,bi:rint(0,G.n-1),o:{trade:tr,msg:pick(CLUMSY[tr]),clumsy:true,urgent:i===0,who:'Le maladroit',av:'🤪'}});}
+  }
+}
+function renderDuelResult(){
+  const me=G?(G.final!=null?G.final:G.score):0;
+  show('duel');
+  if(NET&&NET.oppEnd==null&&!NET.left){
+    $('#duelBody').innerHTML=`<div class="logo" style="font-size:clamp(28px,9vw,36px)">Temps écoulé !</div><div class="code" style="letter-spacing:0;font-size:44px">${fmt(me)}</div><div class="sub" style="text-align:center">⏳ En attente du score de ${esc(NET.opp)}…</div>`;
+    return;
+  }
+  const opp=NET&&NET.oppEnd!=null?NET.oppEnd:null;
+  const win=opp==null||me>opp,draw=opp!=null&&me===opp;
+  if(win&&!draw){BEST_CHRONO=Math.max(BEST_CHRONO,0);}
+  sfx(win?'day':'exp');
+  $('#duelBody').innerHTML=`
+    <div class="logo" style="font-size:clamp(30px,10vw,40px)">${draw?'Égalité !':win?'Victoire ! 🏆':'Défaite…'}</div>
+    <div class="vs box"><div>${esc(myName())}<b>${fmt(me)}</b></div><div style="font-size:24px">VS</div><div>${esc(NET?NET.opp:'?')}<b>${opp==null?'—':fmt(opp)}</b></div></div>
+    ${NET&&NET.left&&opp==null?`<div class="sub" style="text-align:center">${esc(NET.opp)} a quitté la partie : victoire par forfait.</div>`:''}
+    ${NET&&!NET.left&&!NET.closed?'<button class="big" id="btnRematch">🔁 Revanche</button>':''}
+    <button class="big alt sm" id="duelMenu">Menu</button>`;
+  const rb=$('#btnRematch');if(rb)rb.onclick=()=>{nsend({t:'rematch'});rb.textContent=`⏳ En attente de ${NET.opp}…`;rb.disabled=true;};
+  $('#duelMenu').onclick=()=>{nsend({t:'leave'});netClose();renderMenu();};
+}
+
 /* ================== CLASSEMENT ================== */
 function renderLb(tab){
   const list=LB[tab]||[];
@@ -960,7 +1123,7 @@ function renderLb(tab){
 
 /* ================== CONTRÔLES ================== */
 function setPause(p){
-  if(!G||!G.running)return;G.paused=p;
+  if(!G||!G.running||G.mode==='duel')return;G.paused=p;
   $('#pauseCh').innerHTML=G.mode==='camp'&&S.ch?`<div class="box"><h3>🎯 Défis du jour</h3>${chHTML(c=>G.chDone[c.id]?'ok':'')}</div>`:'';
   $('#pause').classList.toggle('hidden',!p);last=performance.now();
   if(p)musicStop();else musicStart();
@@ -983,7 +1146,7 @@ document.addEventListener('keydown',e=>{
     if(G.tickets[n])select(G.tickets[n].id);e.preventDefault();
   }
 });
-renderMenu();
+(function(){const m=(location.hash||'').match(/^#duel-([A-Za-z0-9]{4})$/);if(m){renderDuel(m[1].toUpperCase());}else renderMenu();})();
 </script>
 
 </body>

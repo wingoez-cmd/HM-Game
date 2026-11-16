@@ -1,0 +1,16 @@
+{
+  "name": "jeu-du-hm",
+  "version": "1.0.0",
+  "description": "Jeu de gestion pour Hospitality Managers : dispatcher les tickets des salariés au bon intervenant sur 5 bâtiments.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
